@@ -1,0 +1,24 @@
+{
+  "compilerOptions": {
+    "target": "es2016",
+    "module": "commonjs",
+    "outDir": "./dist",
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "strict": true,
+    "skipLibCheck": true,
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["app/*"],
+      "@dto/*": ["app/common/dto/*"],
+      "@helpers/*": ["app/common/helper/*"],
+      "@services/*": ["app/common/services/*"],
+      "@middlewares/*": ["app/common/middleware/*"]
+    },
+    "types": ["node"]
+  },
+  "ts-node": {
+    "require": ["tsconfig-paths/register"]
+  },
+  "include": ["app", "server.ts"]
+}

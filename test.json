@@ -1,0 +1,14 @@
+[
+  {
+    "driverLicense": "MH12-2019-456789",
+    "phoneNumber": "+91-9876543210"
+  },
+  {
+    "driverLicense": "RJ14-2021-112233",
+    "phoneNumber": "+91-9123456789"
+  },
+  {
+    "driverLicense": "DL08-2018-778899",
+    "phoneNumber": "+91-9001122334"
+  }
+]

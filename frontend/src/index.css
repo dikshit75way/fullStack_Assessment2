@@ -1,0 +1,26 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+  --color-gray-50: #f9fafb;
+  --color-gray-900: #111827;
+  --color-brand-blue-start: #2563eb;
+  --color-brand-blue-end: #1d4ed8;
+}
+
+body {
+  background-color: var(--color-gray-50);
+  color: var(--color-gray-900);
+}
+
+@utility bg-gradient-brand {
+    @apply bg-gradient-to-r from-blue-600 to-indigo-700;
+}
+
+@utility text-gradient-brand {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-700;
+}
+
+@utility btn-primary {
+    @apply bg-gradient-to-r from-blue-600 to-indigo-700 text-white hover:from-blue-700 hover:to-indigo-800 transition shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 active:translate-y-0;
+}
