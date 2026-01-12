@@ -22,9 +22,11 @@ export const bookingApi = api.injectEndpoints({
         method: "POST",
         body: data,
       }),
+      invalidatesTags: ["Booking"],
     }),
     getMyBookings: builder.query<{ data: Booking[] }, void>({
       query: () => "/bookings/my",
+      providesTags: ["Booking"],
     }),
     cancelBooking: builder.mutation<Booking, { id: string; reason: string }>({
       query: ({ id, reason }) => ({
@@ -32,6 +34,7 @@ export const bookingApi = api.injectEndpoints({
         method: "POST",
         body: { reason },
       }),
+      invalidatesTags: ["Booking"],
     }),
   }),
 });

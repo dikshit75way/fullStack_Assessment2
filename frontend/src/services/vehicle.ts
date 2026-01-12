@@ -28,21 +28,21 @@ export const vehicleApi = api.injectEndpoints({
     }),
     createVehicle: builder.mutation<Vehicle, FormData>({
       query: (formData) => ({
-        url: "/vehicles",
+        url: "/admin/vehicles",
         method: "POST",
         body: formData,
       }),
     }),
     updateVehicle: builder.mutation<Vehicle, { id: string; data: FormData }>({
       query: ({ id, data }) => ({
-        url: `/vehicles/${id}`,
+        url: `/admin/vehicles/${id}`,
         method: "PATCH",
         body: data,
       }),
     }),
     deleteVehicle: builder.mutation<void, string>({
       query: (id) => ({
-        url: `/vehicles/${id}`,
+        url: `/admin/vehicles/${id}`,
         method: "DELETE",
       }),
     }),

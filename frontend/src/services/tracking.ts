@@ -10,7 +10,7 @@ export interface TrackingData {
 export const trackingApi = api.injectEndpoints({
   endpoints: (builder) => ({
     getVehicleTracking: builder.query<{ data: TrackingData }, string>({
-      query: (vehicleId) => `/tracking/${vehicleId}`,
+      query: (vehicleId) => `/admin/tracking/${vehicleId}`,
       keepUnusedDataFor: 5, // Cache for 5 seconds for real-time feel
     }),
   }),

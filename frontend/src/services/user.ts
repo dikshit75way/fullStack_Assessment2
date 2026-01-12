@@ -21,13 +21,13 @@ export const userApi = api.injectEndpoints({
             invalidatesTags: ['User'],
         }),
         getAllUsers: builder.query<User[], void>({
-            query: () => "/users",
+            query: () => "/admin/users",
             transformResponse: (response: { data: User[] }) => response.data,
             providesTags: ['UserList'],
         }),
         updateKYCStatus: builder.mutation<User, { id: string; status: string }>({
              query: ({ id, status }) => ({
-                 url: `/users/admin/kyc/${id}`,
+                 url: `/admin/users/kyc/${id}`,
                  method: "PATCH",
                  body: { status }
              }),

@@ -1,13 +1,13 @@
-
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { X, CreditCard, Lock } from 'lucide-react';
-import { useInitiatePaymentMutation, useGetPaymentStatusQuery } from '../services/payment';
+import { useInitiatePaymentMutation, useConfirmPaymentMutation } from '../services/payment';
 import toast from 'react-hot-toast';
-import { useForm } from 'react-hook-form';
-import { yupResolver } from '@hookform/resolvers/yup';
-import * as yup from 'yup';
-import { Input } from './Input';
 import { cn } from '../utils/cn';
+import { loadStripe } from '@stripe/stripe-js';
+import { Elements, CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
+
+// Initialize Stripe with Publishable Key
+const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || 'pk_test_placeholder');
 
 interface PaymentModalProps {
     isOpen: boolean;
@@ -17,149 +17,136 @@ interface PaymentModalProps {
     onSuccess: () => void;
 }
 
-const paymentSchema = yup.object({
-  cardNumber: yup.string()
-    .required('Card number is required')
-    .matches(/^\d{4} \d{4} \d{4} \d{4}$/, 'Invalid card number format'),
-  expiry: yup.string()
-    .required('Expiry date is required')
-    .matches(/^(0[1-9]|1[0-2])\/\d{2}$/, 'Invalid expiry format (MM/YY)'),
-  cvc: yup.string()
-    .required('CVC is required')
-    .matches(/^\d{3,4}$/, 'Invalid CVC'),
-}).required();
-
-type PaymentFormInputs = yup.InferType<typeof paymentSchema>;
-
-export const PaymentModal = ({ isOpen, onClose, bookingId, amount, onSuccess }: PaymentModalProps) => {
+const CheckoutForm = ({ bookingId, amount, onSuccess, onClose }: Omit<PaymentModalProps, 'isOpen'>) => {
+    const stripe = useStripe();
+    const elements = useElements();
     const [isProcessing, setIsProcessing] = useState(false);
-    
-    // API Hooks
+    const [confirmPayment] = useConfirmPaymentMutation();
     const [initiatePayment] = useInitiatePaymentMutation();
-    
-    // Polling logic: Only poll when isProcessing is true
-    const { data: statusData } = useGetPaymentStatusQuery(bookingId, {
-        pollingInterval: isProcessing ? 2000 : 0,
-        skip: !isOpen || !bookingId,
-    });
 
-    const {
-        register,
-        handleSubmit,
-        reset,
-        formState: { errors },
-    } = useForm<PaymentFormInputs>({
-        resolver: yupResolver(paymentSchema),
-    });
+    const handleSubmit = async (event: React.FormEvent) => {
+        event.preventDefault();
 
-    useEffect(() => {
-        if (!isOpen) {
-            reset();
-            setIsProcessing(false);
-        }
-    }, [isOpen, reset]);
+        if (!stripe || !elements) return;
 
-    // Handle polling results
-    useEffect(() => {
-        if (isProcessing && statusData?.data) {
-            const status = statusData.data.status;
-            if (status === 'success') {
-                toast.dismiss('payment-toast');
-                toast.success("Payment Successful!");
-                setIsProcessing(false);
-                onSuccess();
-                onClose();
-            } else if (status === 'failed') {
-                toast.dismiss('payment-toast');
-                toast.error("Payment Failed. Please try again.");
-                setIsProcessing(false);
-            }
-        }
-    }, [statusData, isProcessing, onSuccess, onClose]);
+        setIsProcessing(true);   
+        const cardElement = elements.getElement(CardElement);
 
-    const onSubmit = async (_data: PaymentFormInputs) => {
-        setIsProcessing(true);
-        toast.loading("Processing Payment...", { id: 'payment-toast' });
+        if (!cardElement) return;
+
+        toast.loading("Initiating Secure Session...", { id: 'payment-toast' });
 
         try {
-            await initiatePayment({
+            // 1. Get Client Secret from Backend
+            const paymentResponse = await initiatePayment({
                 bookingId,
                 amount,
                 currency: 'USD',
-                paymentMethod: 'credit_card'
+                paymentMethod: 'stripe_card'
             }).unwrap();
+
+            const clientSecret = paymentResponse.clientSecret;
+            if (!clientSecret) throw new Error("Could not retrieve payment intent");
+
+            toast.loading("Confirming with Bank...", { id: 'payment-toast' });
+
+            // 2. Confirm Payment with Stripe
+            const { error, paymentIntent } = await stripe.confirmCardPayment(clientSecret, {
+                payment_method: {
+                    card: cardElement,
+                },
+            });
+
+            if (error) {
+                toast.error(error.message || 'Payment failed', { id: 'payment-toast' });
+                setIsProcessing(false);
+            } else if (paymentIntent?.status === 'succeeded') {
+                toast.loading("Payment received! Finalizing...", { id: 'payment-toast' });
+                
+                // 3. Manual fallback to update backend status immediately
+                try {
+                    await confirmPayment({ paymentIntentId: paymentIntent.id }).unwrap();
+                } catch (confirmErr) {
+                    console.error("Manual confirmation failed, status will update via webhook shortly", confirmErr);
+                }
+
+                toast.success("Booking Confirmed!", { id: 'payment-toast' });
+                setIsProcessing(false);
+                onSuccess();
+                onClose();
+            }
         } catch (err: any) {
             console.error(err);
-            toast.dismiss('payment-toast');
-            toast.error(err.data?.message || 'Payment initiation failed');
+            toast.error(err.data?.message || err.message || 'Payment failed', { id: 'payment-toast' });
             setIsProcessing(false);
         }
     };
 
-    if (!isOpen) return null;
+    return (
+        <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="bg-gray-50 p-4 rounded-lg border border-gray-200 shadow-inner">
+                <CardElement 
+                    options={{
+                        style: {
+                            base: {
+                                fontSize: '16px',
+                                color: '#1f2937',
+                                '::placeholder': {
+                                    color: '#9ca3af',
+                                },
+                            },
+                            invalid: {
+                                color: '#dc2626',
+                            },
+                        },
+                    }}
+                />
+            </div>
+
+            <button
+                type="submit"
+                disabled={!stripe || isProcessing}
+                className={cn(
+                    "w-full py-4 rounded-lg font-bold text-white shadow-lg transition transform active:scale-95 text-lg",
+                    isProcessing ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'
+                )}
+            >
+                {isProcessing ? 'Verifying Transaction...' : `Pay $${amount.toFixed(2)}`}
+            </button>
+        </form>
+    );
+};
+
+export const PaymentModal = (props: PaymentModalProps) => {
+    if (!props.isOpen) return null;
 
     return (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-xl shadow-2xl w-full max-w-md relative overflow-hidden animate-in fade-in zoom-in duration-300">
-                <div className="bg-gray-50 px-6 py-4 border-b flex justify-between items-center">
-                    <h3 className="text-xl font-bold flex items-center">
-                        <CreditCard className="mr-2 text-blue-600" /> Secure Payment
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-300">
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md relative overflow-hidden animate-in slide-in-from-bottom-4 duration-500">
+                <div className="bg-gray-50 px-6 py-5 border-b flex justify-between items-center">
+                    <h3 className="text-xl font-bold flex items-center text-gray-800">
+                        <CreditCard className="mr-2 text-blue-600" /> Secure Checkout
                     </h3>
-                    <button onClick={onClose} className="text-gray-400 hover:text-gray-600 transition">
+                    <button onClick={props.onClose} className="text-gray-400 hover:text-gray-600 transition p-1 rounded-full hover:bg-gray-100">
                         <X size={24} />
                     </button>
                 </div>
                 
-                <div className="p-6">
-                    <div className="mb-6 text-center">
-                        <p className="text-gray-500 mb-1 text-sm uppercase tracking-wider">Total Amount</p>
-                        <p className="text-4xl font-black text-gray-900">${amount.toFixed(2)}</p>
+                <div className="p-8">
+                    <div className="mb-8 text-center bg-blue-50/50 py-6 rounded-xl border border-blue-100">
+                        <p className="text-blue-600 mb-1 text-xs font-bold uppercase tracking-widest">Amount to Pay</p>
+                        <p className="text-5xl font-black text-gray-900">${props.amount.toFixed(2)}</p>
                     </div>
 
-                    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-                        <Input
-                            label="Card Number"
-                            placeholder="0000 0000 0000 0000"
-                            {...register('cardNumber')}
-                            error={errors.cardNumber?.message}
-                            icon={<CreditCard size={20} />}
-                            autoComplete="cc-number"
-                        />
-
-                        <div className="grid grid-cols-2 gap-4">
-                            <Input
-                                label="Expiry Date"
-                                placeholder="MM/YY"
-                                {...register('expiry')}
-                                error={errors.expiry?.message}
-                                autoComplete="cc-exp"
-                            />
-                            <Input
-                                label="CVC"
-                                placeholder="123"
-                                type="password"
-                                {...register('cvc')}
-                                error={errors.cvc?.message}
-                                icon={<Lock size={18} />}
-                                autoComplete="cc-csc"
-                            />
-                        </div>
-
-                        <button 
-                            type="submit" 
-                            disabled={isProcessing}
-                            className={cn(
-                                "w-full py-4 rounded-lg font-bold text-white shadow-lg transition transform active:scale-95 text-lg",
-                                isProcessing ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'
-                            )}
-                        >
-                            {isProcessing ? 'Verifying Transaction...' : `Pay $${amount.toFixed(2)}`}
-                        </button>
-                    </form>
+                    <Elements stripe={stripePromise}>
+                        <CheckoutForm {...props} />
+                    </Elements>
                     
-                    <p className="mt-6 text-xs text-center text-gray-400 flex items-center justify-center">
-                        <Lock size={12} className="mr-1" /> Encrypted & Secure Connection
-                    </p>
+                    <div className="mt-8 flex flex-col items-center space-y-2">
+                        <p className="text-[10px] text-gray-400 flex items-center bg-gray-50 px-3 py-1 rounded-full border border-gray-100">
+                            <Lock size={10} className="mr-1 text-green-500" /> Powered by Stripe • AES-256 Encryption
+                        </p>
+                    </div>
                 </div>
             </div>
         </div>
