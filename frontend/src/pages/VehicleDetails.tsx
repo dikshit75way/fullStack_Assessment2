@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useGetVehicleByIdQuery } from '../services/vehicle';
 import { useCreateBookingMutation } from '../services/booking';
-import { Users, Fuel, Gauge, ArrowLeft, Calendar, CheckCircle, ShieldAlert } from 'lucide-react';
+import { Users, Fuel, Gauge, ArrowLeft, Calendar } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { Input } from '../components/Input';
 import { useSelector, useDispatch } from 'react-redux';
@@ -14,6 +14,8 @@ import { type IUser } from '../store/authSlice';
 import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
+import { KYCStatusBanner } from '../components/Vehicle/KYCStatusBanner';
+import { VehicleFeatures } from '../components/Vehicle/VehicleFeatures';
 
 
 
@@ -165,36 +167,9 @@ export const VehicleDetails = () => {
                </div>
 
                {/* KYC Status Banner */}
-               {user && user.kycStatus !== 'verified' && (
-                   <div className={`mb-6 p-4 rounded-lg flex items-center ${
-                       user.kycStatus === 'pending' ? 'bg-yellow-50 text-yellow-800' : 'bg-red-50 text-red-800'
-                   }`}>
-                       <ShieldAlert className="mr-2" />
-                       <div>
-                           <p className="font-bold">Verification Required</p>
-                           <p className="text-sm">
-                               {user.kycStatus === 'pending' 
-                                 ? 'Your KYC is currently under review. You will be able to book once verified.' 
-                                 : 'You need to complete KYC verification to book vehicles.'}
-                           </p>
-                       </div>
-                   </div>
-               )}
+               {user && <KYCStatusBanner status={user.kycStatus || 'pending'} />}
 
-               <div className="mb-6">
-                 <h3 className="text-xl font-semibold mb-3">Features</h3>
-                 <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                   {vehicle.features && vehicle.features.length > 0 ? (
-                      vehicle.features.map((feature, idx) => (
-                        <li key={idx} className="flex items-center text-gray-600">
-                          <CheckCircle size={16} className="mr-2 text-green-500" /> {feature}
-                        </li>
-                      ))
-                   ) : (
-                     <li className="text-gray-500 italic">No specific features listed.</li>
-                   )}
-                 </ul>
-               </div>
+               <VehicleFeatures features={vehicle.features} />
 
                 <form onSubmit={handleSubmit(onSubmit)}>
                     <div className="bg-gray-50 p-4 rounded-lg mb-4">

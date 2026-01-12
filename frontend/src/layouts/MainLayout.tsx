@@ -2,13 +2,24 @@ import { Outlet, Link } from "react-router-dom";
 import { useSelector, useDispatch } from "react-redux";
 import type { RootState } from "../store/store";
 import { logout } from "../store/authSlice";
+import { useLogoutMutation } from "../services/auth";
+import toast from "react-hot-toast";
+import { UserActions } from "../components/Layout/UserActions";
 
 const Navbar = () => {
   const { user, isAuthenticated } = useSelector((state: RootState) => state.auth);
+  const [logoutServer] = useLogoutMutation();
   const dispatch = useDispatch();
 
-  const handleLogout = () => {
-    dispatch(logout());
+  const handleLogout = async () => {
+    try {
+      await logoutServer({}).unwrap();
+    } catch (err) {
+      console.error("Server logout failed", err);
+    } finally {
+      dispatch(logout());
+      toast.success("Logged out successfully");
+    }
   };
 
   return (
@@ -26,26 +37,11 @@ const Navbar = () => {
             </div>
           </div>
           <div className="flex items-center space-x-4">
-            {isAuthenticated ? (
-              <>
-                <Link to="/dashboard" className="text-gray-700 hover:text-blue-600 font-medium">Dashboard</Link>
-                <span className="text-gray-700 font-medium">Hello, {user?.name}</span>
-                {user?.role === "admin" && (
-                   <Link to="/admin" className="text-gray-700 hover:text-blue-600 font-medium">Admin</Link>
-                )}
-                <button 
-                  onClick={handleLogout}
-                  className="bg-red-500 text-white px-4 py-2 rounded-md hover:bg-red-600 transition shadow"
-                >
-                  Logout
-                </button>
-              </>
-            ) : (
-              <>
-                 <Link to="/login" className="text-gray-700 hover:text-blue-600 font-medium">Login</Link>
-                 <Link to="/register" className="btn-primary px-4 py-2 rounded-md">Register</Link>
-              </>
-            )}
+            <UserActions 
+              isAuthenticated={isAuthenticated} 
+              user={user as any} 
+              onLogout={handleLogout} 
+            />
           </div>
         </div>
       </div>

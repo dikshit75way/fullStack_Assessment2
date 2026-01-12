@@ -1,6 +1,7 @@
 import Booking from "./booking.schema";
 import { type IBooking } from "./booking.dto";
 import { addBookingTimeoutJob } from "../common/queue/booking.queue";
+import createHttpError from "http-errors";
 
 export const createBooking = async (data: IBooking) => {
   // Overlap check
@@ -15,7 +16,7 @@ export const createBooking = async (data: IBooking) => {
   });
 
   if (overlap) {
-    throw new Error("Vehicle is already booked for these dates.");
+    throw createHttpError(409, "Vehicle is already booked for these dates.");
   }
 
   const booking = await Booking.create({ ...data, status: "pending" });
@@ -40,9 +41,9 @@ export const updateBookingStatus = async (id: string, status: IBooking["status"]
 
 export const cancelBooking = async (id: string, reason: string) => {
   const booking = await Booking.findById(id);
-  if (!booking) throw new Error("Booking not found");
+  if (!booking) throw createHttpError(404, "Booking not found");
 
-  if (booking.status === "cancelled") throw new Error("Booking already cancelled");
+  if (booking.status === "cancelled") throw createHttpError(400, "Booking already cancelled");
 
   // Calculate Refund
   let refundAmount = 0;

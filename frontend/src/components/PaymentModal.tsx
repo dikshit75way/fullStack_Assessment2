@@ -1,8 +1,13 @@
 
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { X, CreditCard, Lock } from 'lucide-react';
-import { useInitiatePaymentMutation, useLazyGetPaymentStatusQuery } from '../services/payment';
+import { useInitiatePaymentMutation, useGetPaymentStatusQuery } from '../services/payment';
 import toast from 'react-hot-toast';
+import { useForm } from 'react-hook-form';
+import { yupResolver } from '@hookform/resolvers/yup';
+import * as yup from 'yup';
+import { Input } from './Input';
+import { cn } from '../utils/cn';
 
 interface PaymentModalProps {
     isOpen: boolean;
@@ -12,80 +17,90 @@ interface PaymentModalProps {
     onSuccess: () => void;
 }
 
+const paymentSchema = yup.object({
+  cardNumber: yup.string()
+    .required('Card number is required')
+    .matches(/^\d{4} \d{4} \d{4} \d{4}$/, 'Invalid card number format'),
+  expiry: yup.string()
+    .required('Expiry date is required')
+    .matches(/^(0[1-9]|1[0-2])\/\d{2}$/, 'Invalid expiry format (MM/YY)'),
+  cvc: yup.string()
+    .required('CVC is required')
+    .matches(/^\d{3,4}$/, 'Invalid CVC'),
+}).required();
+
+type PaymentFormInputs = yup.InferType<typeof paymentSchema>;
+
 export const PaymentModal = ({ isOpen, onClose, bookingId, amount, onSuccess }: PaymentModalProps) => {
-    const [cardNumber, setCardNumber] = useState('');
-    const [expiry, setExpiry] = useState('');
-    const [cvc, setCvc] = useState('');
     const [isProcessing, setIsProcessing] = useState(false);
     
     // API Hooks
     const [initiatePayment] = useInitiatePaymentMutation();
-    const [getPaymentStatus] = useLazyGetPaymentStatusQuery();
+    
+    // Polling logic: Only poll when isProcessing is true
+    const { data: statusData } = useGetPaymentStatusQuery(bookingId, {
+        pollingInterval: isProcessing ? 2000 : 0,
+        skip: !isOpen || !bookingId,
+    });
+
+    const {
+        register,
+        handleSubmit,
+        reset,
+        formState: { errors },
+    } = useForm<PaymentFormInputs>({
+        resolver: yupResolver(paymentSchema),
+    });
 
     useEffect(() => {
         if (!isOpen) {
-            setCardNumber('');
-            setExpiry('');
-            setCvc('');
+            reset();
             setIsProcessing(false);
         }
-    }, [isOpen]);
+    }, [isOpen, reset]);
 
-    const handlePayment = async (e: React.FormEvent) => {
-        e.preventDefault();
+    // Handle polling results
+    useEffect(() => {
+        if (isProcessing && statusData?.data) {
+            const status = statusData.data.status;
+            if (status === 'success') {
+                toast.dismiss('payment-toast');
+                toast.success("Payment Successful!");
+                setIsProcessing(false);
+                onSuccess();
+                onClose();
+            } else if (status === 'failed') {
+                toast.dismiss('payment-toast');
+                toast.error("Payment Failed. Please try again.");
+                setIsProcessing(false);
+            }
+        }
+    }, [statusData, isProcessing, onSuccess, onClose]);
+
+    const onSubmit = async (_data: PaymentFormInputs) => {
         setIsProcessing(true);
+        toast.loading("Processing Payment...", { id: 'payment-toast' });
 
         try {
-            // 1. Initiate Payment
             await initiatePayment({
                 bookingId,
                 amount,
                 currency: 'USD',
                 paymentMethod: 'credit_card'
             }).unwrap();
-
-            toast.loading("Processing Payment...", { id: 'payment-toast' });
-
-            // 2. Poll for status (Simulated)
-            const checkStatus = setInterval(async () => {
-                const { data } = await getPaymentStatus(bookingId);
-                
-                if (data?.data?.status === 'success') {
-                    clearInterval(checkStatus);
-                    toast.dismiss('payment-toast');
-                    toast.success("Payment Successful!");
-                    setIsProcessing(false);
-                    onSuccess();
-                    onClose();
-                } else if (data?.data?.status === 'failed') {
-                     clearInterval(checkStatus);
-                     toast.dismiss('payment-toast');
-                     toast.error("Payment Failed. Please try again.");
-                     setIsProcessing(false);
-                }
-            }, 1000);
-
-            // Timeout after 10s
-             setTimeout(() => {
-                 clearInterval(checkStatus);
-                 if (isProcessing) {
-                     toast.dismiss('payment-toast');
-                     toast.error("Payment Timed Out");
-                     setIsProcessing(false);
-                 }
-             }, 10000);
-
-         } catch (err: any) {
-              console.error(err);
-              toast.error(err.data?.message || 'Registration failed');
-            }
+        } catch (err: any) {
+            console.error(err);
+            toast.dismiss('payment-toast');
+            toast.error(err.data?.message || 'Payment initiation failed');
+            setIsProcessing(false);
+        }
     };
 
     if (!isOpen) return null;
 
     return (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-xl shadow-2xl w-full max-w-md relative overflow-hidden">
+            <div className="bg-white rounded-xl shadow-2xl w-full max-w-md relative overflow-hidden animate-in fade-in zoom-in duration-300">
                 <div className="bg-gray-50 px-6 py-4 border-b flex justify-between items-center">
                     <h3 className="text-xl font-bold flex items-center">
                         <CreditCard className="mr-2 text-blue-600" /> Secure Payment
@@ -97,69 +112,52 @@ export const PaymentModal = ({ isOpen, onClose, bookingId, amount, onSuccess }: 
                 
                 <div className="p-6">
                     <div className="mb-6 text-center">
-                        <p className="text-gray-500 mb-1">Total Amount</p>
-                        <p className="text-3xl font-bold text-gray-900">${amount.toFixed(2)}</p>
+                        <p className="text-gray-500 mb-1 text-sm uppercase tracking-wider">Total Amount</p>
+                        <p className="text-4xl font-black text-gray-900">${amount.toFixed(2)}</p>
                     </div>
 
-                    <form onSubmit={handlePayment}>
-                        <div className="mb-4">
-                            <label className="block text-gray-700 font-medium mb-2">Card Number</label>
-                            <div className="relative">
-                                <input 
-                                    type="text" 
-                                    placeholder="0000 0000 0000 0000"
-                                    className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
-                                    value={cardNumber}
-                                    onChange={(e) => setCardNumber(e.target.value)}
-                                    required
-                                    maxLength={19}
-                                />
-                                <CreditCard className="absolute left-3 top-3.5 text-gray-400" size={20} />
-                            </div>
-                        </div>
+                    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+                        <Input
+                            label="Card Number"
+                            placeholder="0000 0000 0000 0000"
+                            {...register('cardNumber')}
+                            error={errors.cardNumber?.message}
+                            icon={<CreditCard size={20} />}
+                            autoComplete="cc-number"
+                        />
 
-                        <div className="grid grid-cols-2 gap-4 mb-6">
-                            <div>
-                                <label className="block text-gray-700 font-medium mb-2">Expiry Date</label>
-                                <input 
-                                    type="text" 
-                                    placeholder="MM/YY"
-                                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition"
-                                    value={expiry}
-                                    onChange={(e) => setExpiry(e.target.value)}
-                                    required
-                                    maxLength={5}
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-gray-700 font-medium mb-2">CVC</label>
-                                <div className="relative">
-                                    <input 
-                                        type="text" 
-                                        placeholder="123"
-                                        className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition"
-                                        value={cvc}
-                                        onChange={(e) => setCvc(e.target.value)}
-                                        required
-                                        maxLength={3}
-                                    />
-                                    <Lock className="absolute left-3 top-3.5 text-gray-400" size={18} />
-                                </div>
-                            </div>
+                        <div className="grid grid-cols-2 gap-4">
+                            <Input
+                                label="Expiry Date"
+                                placeholder="MM/YY"
+                                {...register('expiry')}
+                                error={errors.expiry?.message}
+                                autoComplete="cc-exp"
+                            />
+                            <Input
+                                label="CVC"
+                                placeholder="123"
+                                type="password"
+                                {...register('cvc')}
+                                error={errors.cvc?.message}
+                                icon={<Lock size={18} />}
+                                autoComplete="cc-csc"
+                            />
                         </div>
 
                         <button 
                             type="submit" 
                             disabled={isProcessing}
-                            className={`w-full py-3 rounded-lg font-bold text-white shadow-lg transition transform active:scale-95 ${
-                                isProcessing ? 'bg-gray-400 cursor-not-allowed' : 'bg-green-600 hover:bg-green-700'
-                            }`}
+                            className={cn(
+                                "w-full py-4 rounded-lg font-bold text-white shadow-lg transition transform active:scale-95 text-lg",
+                                isProcessing ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'
+                            )}
                         >
-                            {isProcessing ? 'Processing Payment...' : `Pay $${amount.toFixed(2)}`}
+                            {isProcessing ? 'Verifying Transaction...' : `Pay $${amount.toFixed(2)}`}
                         </button>
                     </form>
                     
-                    <p className="mt-4 text-xs text-center text-gray-400 flex items-center justify-center">
+                    <p className="mt-6 text-xs text-center text-gray-400 flex items-center justify-center">
                         <Lock size={12} className="mr-1" /> Encrypted & Secure Connection
                     </p>
                 </div>

@@ -2,6 +2,7 @@ import multer from "multer";
 import path from "path";
 import fs from "fs";
 import { type Request } from "express";
+import createHttpError from "http-errors";
 // Ensure upload directory exists
 const uploadDir = path.join(__dirname, "../../../uploads/vehicles");
 if (!fs.existsSync(uploadDir)) {
@@ -22,7 +23,7 @@ const fileFilter = (req: Request, file: Express.Multer.File, cb: multer.FileFilt
   if (file.mimetype.startsWith("image/")) {
     cb(null, true);
   } else {
-    cb(new Error("Only images are allowed!") as any, false);
+    cb(createHttpError(400, "Only images are allowed!") as any, false);
   }
 };
 

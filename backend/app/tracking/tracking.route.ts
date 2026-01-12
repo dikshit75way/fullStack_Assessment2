@@ -2,12 +2,13 @@ import { Router } from "express";
 import asyncHandler from "express-async-handler";
 import * as vehicleService from "../vehicle/vehicle.service";
 import { createResponse } from "../common/helper/response.helper";
+import createHttpError from "http-errors";
 
 const router = Router();
 
 router.get("/:vehicleId", asyncHandler(async (req, res) => {
   const vehicle = await vehicleService.getVehicleById(req.params.vehicleId);
-  if (!vehicle) throw new Error("Vehicle not found");
+  if (!vehicle) throw createHttpError(404, "Vehicle not found");
 
   // Mocking LIVE GPS data by adding random movement (jitter)
   // Simulate movement within ~0.005 degrees (approx 500m radius)

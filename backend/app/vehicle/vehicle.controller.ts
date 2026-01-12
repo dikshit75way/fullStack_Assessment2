@@ -3,12 +3,13 @@ import { createResponse } from "../common/helper/response.helper";
 import asyncHandler from "express-async-handler";
 import { type Request, type Response } from "express";
 import { type IFilterVehicles } from "./vehicle.dto";
+import createHttpError from "http-errors";
 
 export const createVehicle = asyncHandler(async (req: Request, res: Response) => {
   const userId = req.user?._id;
   const image = req.file ? `/uploads/vehicles/${req.file.filename}` : undefined;
   if (!image) { 
-    throw new Error("Image is required");
+    throw createHttpError(400, "Image is required");
   }
   
   const vehicleData = { ...req.body, image };

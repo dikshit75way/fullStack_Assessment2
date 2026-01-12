@@ -49,3 +49,18 @@ export const refreshToken = asyncHandler(async (req: Request, res: Response) => 
     const result = await authService.refresh(refreshToken);
     res.send(createResponse(result, "Token refreshed"));
 });
+
+export const logout = asyncHandler(async (req: Request, res: Response) => {
+  const userId = req.user?._id;
+  
+  if (userId) {
+    // Clear from DB
+    await userService.updateUser(userId, { refreshToken: "" });
+    
+    // Clear from Redis
+    const redisKey = `refreshToken:${userId}`;
+    await redisClient.del(redisKey);
+  }
+
+  res.send(createResponse({}, "Logged out successfully"));
+});

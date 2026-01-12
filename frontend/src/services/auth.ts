@@ -23,7 +23,13 @@ export const authApi = api.injectEndpoints({
         body: { refreshToken },
       }),
     }),
+    logout: builder.mutation({
+      query: () => ({
+        url: "/auth/logout",
+        method: "POST",
+      }),
+    }),
   }),
 });
 
-export const { useLoginMutation, useRegisterMutation, useRefreshTokenMutation } = authApi;
+export const { useLoginMutation, useRegisterMutation, useRefreshTokenMutation, useLogoutMutation } = authApi;

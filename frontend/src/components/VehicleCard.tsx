@@ -1,7 +1,8 @@
 import { Link } from 'react-router-dom';
 import type { Vehicle } from '../services/vehicle';
-import { Users, Fuel, Gauge } from 'lucide-react'; // Example icons
+import { Users, Fuel, Gauge } from 'lucide-react'; 
 import { getImageUrl } from '../utils/image';
+import { Badge } from './ui/Badge';
 
 interface VehicleCardProps {
   vehicle: Vehicle;
@@ -26,12 +27,12 @@ export const VehicleCard = ({ vehicle }: VehicleCardProps) => {
              <h3 className="text-lg font-bold text-gray-900">{vehicle.brand} {vehicle.model}</h3>
              <p className="text-sm text-gray-500">{vehicle.year} • {vehicle.type}</p>
           </div>
-          <span className={`px-2 py-1 text-xs rounded-full ${
-            vehicle.status === 'available' ? 'bg-green-100 text-green-800' : 
-            vehicle.status === 'rented' ? 'bg-blue-100 text-blue-800' : 'bg-red-100 text-red-800'
-          }`}>
+          <Badge variant={
+            vehicle.status === 'available' ? 'success' : 
+            vehicle.status === 'rented' ? 'info' : 'error'
+          }>
             {vehicle.status}
-          </span>
+          </Badge>
         </div>
 
         <div className="mt-4 flex space-x-4 text-sm text-gray-600">

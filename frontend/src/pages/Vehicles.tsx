@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { useGetVehiclesQuery } from '../services/vehicle';
-import { VehicleCard } from '../components/VehicleCard';
 import { Filter } from 'lucide-react';
+import { VehicleGrid } from '../components/Vehicle/VehicleGrid';
+import { EmptyVehicles } from '../components/Vehicle/EmptyVehicles';
 
 export const Vehicles = () => {
   const [filterType, setFilterType] = useState<string>('');
@@ -38,13 +39,9 @@ export const Vehicles = () => {
       </div>
 
       {vehicles.length === 0 ? (
-        <div className="text-center py-10 text-gray-500">No vehicles found matching your criteria.</div>
+        <EmptyVehicles />
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {vehicles.map((vehicle) => (
-            <VehicleCard key={vehicle._id} vehicle={vehicle} />
-          ))}
-        </div>
+        <VehicleGrid vehicles={vehicles} />
       )}
     </div>
   );
