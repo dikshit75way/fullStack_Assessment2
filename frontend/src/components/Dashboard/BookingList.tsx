@@ -1,6 +1,6 @@
 
-import { Link } from 'react-router-dom';
-import { Car, Calendar, CreditCard, MapPin } from 'lucide-react';
+
+import { Car, Calendar, CreditCard } from 'lucide-react';
 import { Badge } from '../ui/Badge';
 
 interface Booking {
@@ -76,15 +76,6 @@ export const BookingList = ({ bookings, onPay, onCancel }: BookingListProps) => 
                             >
                                 <CreditCard size={16} className="mr-2" /> Pay Now
                             </button>
-                        )}
-
-                        {booking.status === 'confirmed' && booking.vehicleId?._id && (
-                            <Link
-                                to={`/tracking/${booking.vehicleId._id}`}
-                                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg mt-2 flex items-center shadow"
-                            >
-                                <MapPin size={16} className="mr-2" /> Track Vehicle
-                            </Link>
                         )}
 
                         {booking.status !== 'cancelled' && booking.status !== 'completed' && (

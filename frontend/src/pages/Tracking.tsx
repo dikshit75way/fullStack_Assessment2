@@ -19,8 +19,8 @@ export const Tracking = () => {
 
     return (
         <div>
-             <Link to="/dashboard" className="inline-flex items-center text-gray-600 hover:text-blue-600 mb-6 transition">
-                <ArrowLeft size={20} className="mr-2" /> Back to Dashboard
+             <Link to="/admin" className="inline-flex items-center text-gray-600 hover:text-blue-600 mb-6 transition">
+                <ArrowLeft size={20} className="mr-2" /> Back to Admin Dashboard
             </Link>
 
             <div className="bg-white rounded-xl shadow-lg overflow-hidden">

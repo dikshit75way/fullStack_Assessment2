@@ -1,6 +1,7 @@
 import Booking from "./booking.schema";
 import { type IBooking } from "./booking.dto";
 import { addBookingTimeoutJob } from "../common/queue/booking.queue";
+import * as vehicleService from "../vehicle/vehicle.service";
 import createHttpError from "http-errors";
 
 export const createBooking = async (data: IBooking) => {

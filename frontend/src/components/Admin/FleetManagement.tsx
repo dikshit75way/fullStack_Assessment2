@@ -1,6 +1,6 @@
 
 import { Link } from 'react-router-dom';
-import { Plus, Edit, Trash2 } from 'lucide-react';
+import { Plus, Edit, Trash2, MapPin } from 'lucide-react';
 import { Badge } from '../ui/Badge';
 import { getImageUrl } from '../../utils/image';
 
@@ -13,6 +13,7 @@ interface Vehicle {
     status: string;
     pricePerDay: number;
     image: string;
+    isCurrentlyRented?: boolean;
 }
 
 interface FleetManagementProps {
@@ -68,12 +69,26 @@ export const FleetManagement = ({ vehicles, isLoading, onDelete }: FleetManageme
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{vehicle.type}</td>
                                 <td className="px-6 py-4 whitespace-nowrap">
-                                    <Badge variant={vehicleStatusVariant[vehicle.status] || 'gray'}>
-                                        {vehicle.status}
-                                    </Badge>
+                                    <div className="flex flex-col">
+                                        <Badge variant={vehicleStatusVariant[vehicle.status] || 'gray'}>
+                                            {vehicle.status.toUpperCase()}
+                                        </Badge>
+                                        {vehicle.isCurrentlyRented && (
+                                            <span className="text-[10px] text-red-600 font-bold mt-1 animate-pulse">RENTED (LIVE)</span>
+                                        )}
+                                    </div>
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${vehicle.pricePerDay}</td>
                                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                    {vehicle.isCurrentlyRented && (
+                                        <Link
+                                            to={`/admin/tracking/${vehicle._id}`}
+                                            className="text-green-600 hover:text-green-900 mr-4"
+                                            title="Track Vehicle"
+                                        >
+                                            <MapPin size={18} />
+                                        </Link>
+                                    )}
                                     <Link
                                         to={`/admin/vehicles/edit/${vehicle._id}`}
                                         className="text-blue-600 hover:text-blue-900 mr-4"

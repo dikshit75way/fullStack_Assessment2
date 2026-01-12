@@ -21,4 +21,6 @@ export interface IVehicle extends BaseSchema {
 export interface IFilterVehicles {
   status?: "available" | "rented" | "maintenance";
   type?: "Sedan" | "SUV" | "Luxury" | "Truck" | "Van";
+  startDate?: string;
+  endDate?: string;
 }

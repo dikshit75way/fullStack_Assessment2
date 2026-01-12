@@ -57,14 +57,6 @@ export const router = createBrowserRouter([
                   </Suspense>
                 ) 
              },
-             { 
-                path: "/tracking/:id", 
-                element: (
-                  <Suspense fallback={<LoadingSpinner />}>
-                    <Tracking />
-                  </Suspense>
-                ) 
-             },
         ]
       },
       // Protected Routes for Admin Only
@@ -92,6 +84,14 @@ export const router = createBrowserRouter([
                 element: (
                   <Suspense fallback={<LoadingSpinner />}>
                     <AddEditVehicle />
+                  </Suspense>
+                ) 
+            },
+            { 
+                path: "/admin/tracking/:id", 
+                element: (
+                  <Suspense fallback={<LoadingSpinner />}>
+                    <Tracking />
                   </Suspense>
                 ) 
             },

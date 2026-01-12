@@ -18,11 +18,13 @@ export const createVehicle = asyncHandler(async (req: Request, res: Response) =>
 });
 
 export const getVehicles = asyncHandler(async (req: Request, res: Response) => {
-  const { status, type } = req.query;
+  const { status, type, startDate, endDate } = req.query;
   const filters: IFilterVehicles = {};
   
   if (typeof status === "string") filters.status = status as IFilterVehicles["status"];
   if (typeof type === "string") filters.type = type as IFilterVehicles["type"];
+  if (typeof startDate === "string") filters.startDate = startDate;
+  if (typeof endDate === "string") filters.endDate = endDate;
 
   const vehicles = await vehicleService.getAllVehicles(filters);
   res.send(createResponse(vehicles, "Vehicles fetched"));

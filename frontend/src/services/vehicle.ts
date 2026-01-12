@@ -12,6 +12,7 @@ export interface Vehicle {
   status: "available" | "rented" | "maintenance";
   features?: string[];
   owner?: string;
+  isCurrentlyRented?: boolean;
 }
 
 export const vehicleApi = api.injectEndpoints({
