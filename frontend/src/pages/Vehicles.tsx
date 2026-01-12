@@ -1,8 +1,10 @@
+
 import { useState } from 'react';
 import { useGetVehiclesQuery } from '../services/vehicle';
 import { Filter } from 'lucide-react';
 import { VehicleGrid } from '../components/Vehicle/VehicleGrid';
 import { EmptyVehicles } from '../components/Vehicle/EmptyVehicles';
+import { RenderIf } from '../components/ui/RenderIf';
 
 export const Vehicles = () => {
   const [filterType, setFilterType] = useState<string>('');
@@ -38,11 +40,11 @@ export const Vehicles = () => {
         </div>
       </div>
 
-      {vehicles.length === 0 ? (
-        <EmptyVehicles />
-      ) : (
-        <VehicleGrid vehicles={vehicles} />
-      )}
+      <RenderIf 
+        condition={vehicles.length === 0}
+        render={<EmptyVehicles />}
+        fallback={<VehicleGrid vehicles={vehicles} />}
+      />
     </div>
   );
 };

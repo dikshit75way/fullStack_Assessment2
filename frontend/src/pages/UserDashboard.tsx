@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { useGetMyBookingsQuery } from '../services/booking';
 import toast from 'react-hot-toast';
@@ -5,6 +6,7 @@ import { PaymentModal } from '../components/PaymentModal';
 import { CancelBookingModal } from '../components/CancelBookingModal';
 import { EmptyBookings } from '../components/Dashboard/EmptyBookings';
 import { BookingList } from '../components/Dashboard/BookingList';
+import { RenderIf } from '../components/ui/RenderIf';
 
 export const UserDashboard = () => {
   const { data, isLoading, error, refetch } = useGetMyBookingsQuery();
@@ -25,15 +27,17 @@ export const UserDashboard = () => {
           <h2 className="text-xl font-semibold text-gray-800">My Bookings</h2>
         </div>
         
-        {bookings.length === 0 ? (
-           <EmptyBookings />
-        ) : (
-          <BookingList 
-            bookings={bookings} 
-            onPay={(id, amount) => setSelectedBooking({ id, amount })} 
-            onCancel={setBookingToCancel} 
-          />
-        )}
+        <RenderIf 
+          condition={bookings.length === 0}
+          render={<EmptyBookings />}
+          fallback={
+            <BookingList 
+              bookings={bookings} 
+              onPay={(id, amount) => setSelectedBooking({ id, amount })} 
+              onCancel={setBookingToCancel} 
+            />
+          }
+        />
       </div>
 
       {selectedBooking && (

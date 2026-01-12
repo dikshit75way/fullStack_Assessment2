@@ -7,6 +7,7 @@ import { ConfirmModal } from '../components/ui/ConfirmModal';
 import { cn } from '../utils/cn';
 import { FleetManagement } from '../components/Admin/FleetManagement';
 import { KYCRequests } from '../components/Admin/KYCRequests';
+import { RenderIf } from '../components/ui/RenderIf';
 
 export const AdminDashboard = () => {
   const [activeTab, setActiveTab] = useState<'vehicles' | 'kyc'>('vehicles');
@@ -74,19 +75,23 @@ export const AdminDashboard = () => {
           </button>
       </div>
 
-      {activeTab === 'vehicles' ? (
+      <RenderIf 
+        condition={activeTab === 'vehicles'}
+        render={
           <FleetManagement 
             vehicles={vehicles} 
             isLoading={vehicleLoading} 
             onDelete={setVehicleToDelete} 
           />
-      ) : (
+        }
+        fallback={
           <KYCRequests 
             users={kycUsers} 
             isLoading={usersLoading} 
             onAction={handleKYCAction} 
           />
-      )}
+        }
+      />
 
       <ConfirmModal
         isOpen={!!vehicleToDelete}
@@ -100,4 +105,3 @@ export const AdminDashboard = () => {
     </div>
   );
 };
-
