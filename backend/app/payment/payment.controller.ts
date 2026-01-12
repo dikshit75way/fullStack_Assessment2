@@ -17,6 +17,7 @@ export const checkout = asyncHandler(async (req: Request, res: Response) => {
 
 export const getPaymentStatus = asyncHandler(async (req: Request, res: Response) => {
   const payment = await paymentService.getPaymentByBookingId(req.params.bookingId);
+  console.log("Payment status:", payment);
   res.send(createResponse(payment, "Payment status fetched"));
 });
 
