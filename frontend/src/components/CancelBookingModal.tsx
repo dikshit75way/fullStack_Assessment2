@@ -13,6 +13,7 @@ interface CancelBookingModalProps {
 
 export const CancelBookingModal = ({ isOpen, onClose, bookingId, onSuccess }: CancelBookingModalProps) => {
     const [reason, setReason] = useState('');
+    const [error, setError] = useState('');
     const [cancelBooking, { isLoading }] = useCancelBookingMutation();
 
     if (!isOpen) return null;
@@ -21,7 +22,12 @@ export const CancelBookingModal = ({ isOpen, onClose, bookingId, onSuccess }: Ca
         e.preventDefault();
         
         if (!reason.trim()) {
-            toast.error("Please provide a reason for cancellation");
+            setError("Please provide a reason for cancellation");
+            return;
+        }
+
+        if (reason.trim().length < 10) {
+            setError("Reason must be at least 10 characters long");
             return;
         }
 
@@ -69,13 +75,19 @@ export const CancelBookingModal = ({ isOpen, onClose, bookingId, onSuccess }: Ca
                                 Reason for Cancellation <span className="text-red-500">*</span>
                             </label>
                             <textarea 
-                                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none transition"
+                                className={`w-full px-4 py-3 border rounded-lg focus:ring-2 outline-none transition ${
+                                    error ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-red-500'
+                                }`}
                                 rows={3}
                                 placeholder="Please explain why you are cancelling..."
                                 value={reason}
-                                onChange={(e) => setReason(e.target.value)}
+                                onChange={(e) => {
+                                    setReason(e.target.value);
+                                    if (error) setError('');
+                                }}
                                 required
                             />
+                            {error && <p className="mt-1 text-sm text-red-600">{error}</p>}
                         </div>
 
                         <div className="flex justify-end space-x-3">

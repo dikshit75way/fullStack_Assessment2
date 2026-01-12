@@ -9,12 +9,30 @@ import toast from 'react-hot-toast';
 export const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
   const [login, { isLoading }] = useLoginMutation();
   const dispatch = useDispatch();
   const navigate = useNavigate();
 
+  const validate = () => {
+    const newErrors: { email?: string; password?: string } = {};
+    if (!email) {
+      newErrors.email = 'Email is required';
+    } else if (!/\S+@\S+\.\S+/.test(email)) {
+      newErrors.email = 'Invalid email format';
+    }
+    if (!password) {
+      newErrors.password = 'Password is required';
+    } else if (password.length < 6) {
+      newErrors.password = 'Password must be at least 6 characters';
+    }
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!validate()) return;
     try {
       const response = await login({ email, password }).unwrap();
       // The backend returns { code, msg, data: { user, tokens } }
@@ -28,7 +46,7 @@ export const Login = () => {
       navigate('/');
     }   catch (err: any) {
           console.error(err);
-          toast.error(err.data?.message || 'Registration failed');
+          toast.error(err.data?.message || 'Login failed');
         }
   };
 
@@ -49,16 +67,22 @@ export const Login = () => {
           <Input
             label="Email address"
             type="email"
-            required
             value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            onChange={(e) => {
+              setEmail(e.target.value);
+              if (errors.email) setErrors({ ...errors, email: undefined });
+            }}
+            error={errors.email}
           />
           <Input
             label="Password"
             type="password"
-            required
             value={password}
-            onChange={(e) => setPassword(e.target.value)}
+            onChange={(e) => {
+              setPassword(e.target.value);
+              if (errors.password) setErrors({ ...errors, password: undefined });
+            }}
+            error={errors.password}
           />
         </div>
 

@@ -28,6 +28,7 @@ export const VehicleDetails = () => {
       startDate: '',
       endDate: ''
   });
+  const [dateErrors, setDateErrors] = useState<{ startDate?: string; endDate?: string }>({});
 
   const handleBooking = async () => {
       // 1. Check Login
@@ -49,14 +50,19 @@ export const VehicleDetails = () => {
       }
       
       // 3. Dates Validation
-      if (!bookingDates.startDate || !bookingDates.endDate) {
-          toast.error("Please select start and end dates");
-          return;
-      }
+      const newErrors: { startDate?: string; endDate?: string } = {};
+      if (!bookingDates.startDate) newErrors.startDate = "Start date is required";
+      if (!bookingDates.endDate) newErrors.endDate = "End date is required";
       
-      if(new Date(bookingDates.startDate) > new Date(bookingDates.endDate)){
-           toast.error("End date cannot be before start date");
-           return;
+      if (bookingDates.startDate && bookingDates.endDate) {
+          if (new Date(bookingDates.startDate) > new Date(bookingDates.endDate)) {
+              newErrors.endDate = "End date cannot be before start date";
+          }
+      }
+
+      if (Object.keys(newErrors).length > 0) {
+          setDateErrors(newErrors);
+          return;
       }
 
       if (!data?.data) return;
@@ -74,7 +80,7 @@ export const VehicleDetails = () => {
       
       try {
           await createBooking({
-              vehicleId: id,
+              vehicleId: id as any,
               startDate: bookingDates.startDate,
               endDate: bookingDates.endDate,
               totalAmount: totalAmount
@@ -173,26 +179,34 @@ export const VehicleDetails = () => {
                  </ul>
                </div>
 
-               {/* Booking Form Area */}
-               <div className="bg-gray-50 p-4 rounded-lg mb-4">
-                   <h3 className="text-lg font-semibold mb-2">Book this Vehicle</h3>
-                   <div className="grid grid-cols-2 gap-4">
-                        <Input 
-                            label="Start Date" 
-                            type="date" 
-                            value={bookingDates.startDate}
-                            onChange={(e) => setBookingDates({...bookingDates, startDate: e.target.value})}
-                            min={new Date().toISOString().split('T')[0]}
-                        />
-                        <Input 
-                            label="End Date" 
-                            type="date" 
-                            value={bookingDates.endDate}
-                            onChange={(e) => setBookingDates({...bookingDates, endDate: e.target.value})}
-                            min={bookingDates.startDate || new Date().toISOString().split('T')[0]}
-                        />
-                   </div>
-               </div>
+                {/* Booking Form Area */}
+                <div className="bg-gray-50 p-4 rounded-lg mb-4">
+                    <h3 className="text-lg font-semibold mb-2">Book this Vehicle</h3>
+                    <div className="grid grid-cols-2 gap-4">
+                         <Input 
+                             label="Start Date" 
+                             type="date" 
+                             value={bookingDates.startDate}
+                             onChange={(e) => {
+                               setBookingDates({...bookingDates, startDate: e.target.value});
+                               if (dateErrors.startDate) setDateErrors({...dateErrors, startDate: undefined});
+                             }}
+                             min={new Date().toISOString().split('T')[0]}
+                             error={dateErrors.startDate}
+                         />
+                         <Input 
+                             label="End Date" 
+                             type="date" 
+                             value={bookingDates.endDate}
+                             onChange={(e) => {
+                               setBookingDates({...bookingDates, endDate: e.target.value});
+                               if (dateErrors.endDate) setDateErrors({...dateErrors, endDate: undefined});
+                             }}
+                             min={bookingDates.startDate || new Date().toISOString().split('T')[0]}
+                             error={dateErrors.endDate}
+                         />
+                    </div>
+                </div>
             </div>
 
             <div>

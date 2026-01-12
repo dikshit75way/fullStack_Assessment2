@@ -11,20 +11,41 @@ export const Register = () => {
     password: '',
     confirmPassword: '',
   });
+  const [errors, setErrors] = useState<Record<string, string>>({});
   
   const [register, { isLoading }] = useRegisterMutation();
   const navigate = useNavigate();
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
+    if (errors[e.target.name]) {
+      setErrors({ ...errors, [e.target.name]: '' });
+    }
+  };
+
+  const validate = () => {
+    const newErrors: Record<string, string> = {};
+    if (!formData.name.trim()) newErrors.name = 'Name is required';
+    if (!formData.email) {
+      newErrors.email = 'Email is required';
+    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
+      newErrors.email = 'Invalid email format';
+    }
+    if (!formData.password) {
+      newErrors.password = 'Password is required';
+    } else if (formData.password.length < 6) {
+      newErrors.password = 'Password must be at least 6 characters';
+    }
+    if (formData.password !== formData.confirmPassword) {
+      newErrors.confirmPassword = "Passwords don't match";
+    }
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (formData.password !== formData.confirmPassword) {
-      toast.error("Passwords don't match");
-      return;
-    }
+    if (!validate()) return;
 
     try {
       await register({
@@ -59,33 +80,33 @@ export const Register = () => {
           label="Full Name"
           name="name"
           type="text"
-          required
           value={formData.name}
           onChange={handleChange}
+          error={errors.name}
         />
         <Input
           label="Email address"
           name="email"
           type="email"
-          required
           value={formData.email}
           onChange={handleChange}
+          error={errors.email}
         />
         <Input
           label="Password"
           name="password"
           type="password"
-          required
           value={formData.password}
           onChange={handleChange}
+          error={errors.password}
         />
         <Input
           label="Confirm Password"
           name="confirmPassword"
           type="password"
-          required
           value={formData.confirmPassword}
           onChange={handleChange}
+          error={errors.confirmPassword}
         />
 
         <div>
