@@ -1,4 +1,3 @@
-import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useDispatch } from 'react-redux';
 import { useLoginMutation } from '../services/auth';
@@ -40,9 +39,9 @@ export const Login = () => {
       toast.success('Login successful!');
       navigate('/');
     } catch (err: any) {
-          console.error(err);
-          toast.error(err.data?.message || 'Login failed');
-        }
+      console.error(err);
+      toast.error(err.data?.message || 'Login failed');
+    }
   };
 
   return (

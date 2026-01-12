@@ -14,7 +14,7 @@ import { type IUser } from "@/user/user.dto";
 import { redisClient } from "@/common/service/redis.service";
 import { initPassport } from "@/common/service/passport-jwt.service";
 import { initDB } from "@/common/service/database.service";
-import { initBookingCron } from "@/common/cron/booking.cron";
+import "./app/common/queue/booking.queue"; // Ensure BullMQ worker starts
 import { globalLimiter } from "@/common/middleware/rate-limiter.middleware";
 import errorHandler from "@/common/middleware/error-handler.middleware";
 
@@ -56,11 +56,9 @@ const initApp = async (): Promise<void> => {
         redisClient.once("ready", resolve);
       });
     }
-      // passport init
+  // passport init
   initPassport();
   
-  // init cron jobs
-  initBookingCron();
 
   // set base path to /api
   app.use("/api", routes);

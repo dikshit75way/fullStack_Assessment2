@@ -42,14 +42,14 @@ export const AddEditVehicle = () => {
     } = useForm<VehicleFormInputs>({
         resolver: yupResolver(vehicleSchema),
         defaultValues: {
-        brand: '',
-        model: '',
-        year: new Date().getFullYear(),
-        plateNumber: '',
-        type: 'Sedan',
-        pricePerDay: 0,
-        features: '',
-        status: 'available'
+            brand: '',
+            model: '',
+            year: new Date().getFullYear(),
+            plateNumber: '',
+            type: 'Sedan',
+            pricePerDay: 0,
+            features: '',
+            status: 'available'
         }
     });
 
@@ -86,7 +86,7 @@ export const AddEditVehicle = () => {
         // Handle features array
         if (data.features) {
             const featuresArray = data.features.split(',').map(f => f.trim()).filter(Boolean);
-        featuresArray.forEach(f => form.append('features[]', f));
+            featuresArray.forEach(f => form.append('features[]', f));
         }
 
         if (imageFile) {

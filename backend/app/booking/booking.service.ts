@@ -1,5 +1,6 @@
 import Booking from "./booking.schema";
 import { type IBooking } from "./booking.dto";
+import { addBookingTimeoutJob } from "../common/queue/booking.queue";
 
 export const createBooking = async (data: IBooking) => {
   // Overlap check
@@ -17,7 +18,12 @@ export const createBooking = async (data: IBooking) => {
     throw new Error("Vehicle is already booked for these dates.");
   }
 
-  return await Booking.create({ ...data, status: "pending" });
+  const booking = await Booking.create({ ...data, status: "pending" });
+  
+  // Schedule auto-cancellation after 15 minutes
+  await addBookingTimeoutJob(booking._id.toString());
+
+  return booking;
 };
 
 export const getMyBookings = async (userId: string) => {

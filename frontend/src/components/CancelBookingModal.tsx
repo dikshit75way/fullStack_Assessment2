@@ -23,6 +23,15 @@ type CancelFormInputs = yup.InferType<typeof cancelSchema>;
 export const CancelBookingModal = ({ isOpen, onClose, bookingId, onSuccess }: CancelBookingModalProps) => {
     const [cancelBooking, { isLoading }] = useCancelBookingMutation();
 
+    const {
+        register,
+        handleSubmit,
+        formState: { errors },
+        reset
+    } = useForm<CancelFormInputs>({
+        resolver: yupResolver(cancelSchema),
+    });
+
     if (!isOpen) return null;
 
     const onSubmit = async (data: CancelFormInputs) => {
