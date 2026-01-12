@@ -5,38 +5,33 @@ import { useLoginMutation } from '../services/auth';
 import { setCredentials } from '../store/authSlice';
 import { Input } from '../components/Input';
 import toast from 'react-hot-toast';
+import { useForm } from 'react-hook-form';
+import { yupResolver } from '@hookform/resolvers/yup';
+import * as yup from 'yup';
+
+const loginSchema = yup.object({
+  email: yup.string().email('Invalid email format').required('Email is required'),
+  password: yup.string().min(6, 'Password must be at least 6 characters').required('Password is required'),
+}).required();
+
+type LoginFormInputs = yup.InferType<typeof loginSchema>;
 
 export const Login = () => {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
   const [login, { isLoading }] = useLoginMutation();
   const dispatch = useDispatch();
   const navigate = useNavigate();
 
-  const validate = () => {
-    const newErrors: { email?: string; password?: string } = {};
-    if (!email) {
-      newErrors.email = 'Email is required';
-    } else if (!/\S+@\S+\.\S+/.test(email)) {
-      newErrors.email = 'Invalid email format';
-    }
-    if (!password) {
-      newErrors.password = 'Password is required';
-    } else if (password.length < 6) {
-      newErrors.password = 'Password must be at least 6 characters';
-    }
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<LoginFormInputs>({
+    resolver: yupResolver(loginSchema),
+  });
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!validate()) return;
+  const onSubmit = async (data: LoginFormInputs) => {
     try {
-      const response = await login({ email, password }).unwrap();
-      // The backend returns { code, msg, data: { user, tokens } }
-      // We need to pass { user, accessToken, refreshToken } to setCredentials
+      const response = await login(data).unwrap();
       dispatch(setCredentials({ 
         user: response.data.user, 
         accessToken: response.data.tokens.accessToken,
@@ -44,7 +39,7 @@ export const Login = () => {
       }));
       toast.success('Login successful!');
       navigate('/');
-    }   catch (err: any) {
+    } catch (err: any) {
           console.error(err);
           toast.error(err.data?.message || 'Login failed');
         }
@@ -62,27 +57,19 @@ export const Login = () => {
         </Link>
       </p>
 
-      <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
+      <form className="mt-8 space-y-6" onSubmit={handleSubmit(onSubmit)}>
         <div className="rounded-md shadow-sm -space-y-px">
           <Input
             label="Email address"
             type="email"
-            value={email}
-            onChange={(e) => {
-              setEmail(e.target.value);
-              if (errors.email) setErrors({ ...errors, email: undefined });
-            }}
-            error={errors.email}
+            {...register('email')}
+            error={errors.email?.message}
           />
           <Input
             label="Password"
             type="password"
-            value={password}
-            onChange={(e) => {
-              setPassword(e.target.value);
-              if (errors.password) setErrors({ ...errors, password: undefined });
-            }}
-            error={errors.password}
+            {...register('password')}
+            error={errors.password?.message}
           />
         </div>
 

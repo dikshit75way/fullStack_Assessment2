@@ -1,58 +1,41 @@
-import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useRegisterMutation } from '../services/auth';
 import { Input } from '../components/Input';
 import toast from 'react-hot-toast';
+import { useForm } from 'react-hook-form';
+import { yupResolver } from '@hookform/resolvers/yup';
+import * as yup from 'yup';
+
+const registerSchema = yup.object({
+  name: yup.string().required('Full Name is required'),
+  email: yup.string().email('Invalid email format').required('Email is required'),
+  password: yup.string().min(6, 'Password must be at least 6 characters').required('Password is required'),
+  confirmPassword: yup.string()
+    .oneOf([yup.ref('password')], 'Passwords must match')
+    .required('Confirm password is required'),
+}).required();
+
+type RegisterFormInputs = yup.InferType<typeof registerSchema>;
 
 export const Register = () => {
-  const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    password: '',
-    confirmPassword: '',
-  });
-  const [errors, setErrors] = useState<Record<string, string>>({});
-  
-  const [register, { isLoading }] = useRegisterMutation();
+  const [registerUser, { isLoading }] = useRegisterMutation();
   const navigate = useNavigate();
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-    if (errors[e.target.name]) {
-      setErrors({ ...errors, [e.target.name]: '' });
-    }
-  };
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<RegisterFormInputs>({
+    resolver: yupResolver(registerSchema),
+  });
 
-  const validate = () => {
-    const newErrors: Record<string, string> = {};
-    if (!formData.name.trim()) newErrors.name = 'Name is required';
-    if (!formData.email) {
-      newErrors.email = 'Email is required';
-    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      newErrors.email = 'Invalid email format';
-    }
-    if (!formData.password) {
-      newErrors.password = 'Password is required';
-    } else if (formData.password.length < 6) {
-      newErrors.password = 'Password must be at least 6 characters';
-    }
-    if (formData.password !== formData.confirmPassword) {
-      newErrors.confirmPassword = "Passwords don't match";
-    }
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!validate()) return;
-
+  const onSubmit = async (data: RegisterFormInputs) => {
     try {
-      await register({
-        name: formData.name,
-        email: formData.email,
-        password: formData.password,
-        role: "user" // Default role
+      await registerUser({
+        name: data.name,
+        email: data.email,
+        password: data.password,
+        role: "user"
       }).unwrap();
       
       toast.success('Registration successful! Please login.');
@@ -75,38 +58,30 @@ export const Register = () => {
         </Link>
       </p>
 
-      <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
+      <form className="mt-8 space-y-6" onSubmit={handleSubmit(onSubmit)}>
         <Input
           label="Full Name"
-          name="name"
           type="text"
-          value={formData.name}
-          onChange={handleChange}
-          error={errors.name}
+          {...register('name')}
+          error={errors.name?.message}
         />
         <Input
           label="Email address"
-          name="email"
           type="email"
-          value={formData.email}
-          onChange={handleChange}
-          error={errors.email}
+          {...register('email')}
+          error={errors.email?.message}
         />
         <Input
           label="Password"
-          name="password"
           type="password"
-          value={formData.password}
-          onChange={handleChange}
-          error={errors.password}
+          {...register('password')}
+          error={errors.password?.message}
         />
         <Input
           label="Confirm Password"
-          name="confirmPassword"
           type="password"
-          value={formData.confirmPassword}
-          onChange={handleChange}
-          error={errors.confirmPassword}
+          {...register('confirmPassword')}
+          error={errors.confirmPassword?.message}
         />
 
         <div>

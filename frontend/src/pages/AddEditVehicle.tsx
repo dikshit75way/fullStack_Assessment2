@@ -5,13 +5,43 @@ import { Input } from '../components/Input';
 import toast from 'react-hot-toast';
 import { ArrowLeft } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { useForm } from 'react-hook-form';
+import { yupResolver } from '@hookform/resolvers/yup';
+import * as yup from 'yup';
+
+const vehicleSchema = yup.object({
+    brand: yup.string().required('Brand is required'),
+    model: yup.string().required('Model is required'),
+    year: yup.number().typeError('Year must be a number').min(1900, 'Invalid year').max(new Date().getFullYear() + 1, 'Invalid year').required('Year is required'),
+    plateNumber: yup.string().required('Plate number is required'),
+    type: yup.string().required('Type is required'),
+    pricePerDay: yup.number().typeError('Price must be a number').positive('Price must be positive').required('Price is required'),
+    features: yup.string().ensure(),
+    status: yup.string().required('Status is required'),
+}).required();
+
+type VehicleFormInputs = yup.InferType<typeof vehicleSchema>;
 
 export const AddEditVehicle = () => {
     const { id } = useParams<{ id: string }>();
     const isEditMode = !!id;
     const navigate = useNavigate();
 
-    const [formData, setFormData] = useState({
+    const [imageFile, setImageFile] = useState<File | null>(null);
+
+    const [createVehicle, { isLoading: isCreating }] = useCreateVehicleMutation();
+    const [updateVehicle, { isLoading: isUpdating }] = useUpdateVehicleMutation();
+    
+    const { data: vehicleData } = useGetVehicleByIdQuery(id || '', { skip: !isEditMode });
+
+    const {
+        register,
+        handleSubmit,
+        setValue,
+        formState: { errors },
+    } = useForm<VehicleFormInputs>({
+        resolver: yupResolver(vehicleSchema),
+        defaultValues: {
         brand: '',
         model: '',
         year: new Date().getFullYear(),
@@ -20,35 +50,22 @@ export const AddEditVehicle = () => {
         pricePerDay: 0,
         features: '',
         status: 'available'
+        }
     });
-    const [imageFile, setImageFile] = useState<File | null>(null);
-
-    const [createVehicle, { isLoading: isCreating }] = useCreateVehicleMutation();
-    const [updateVehicle, { isLoading: isUpdating }] = useUpdateVehicleMutation();
-    
-    // Fetch vehicle data if in edit mode
-    const { data: vehicleData } = useGetVehicleByIdQuery(id || '', { skip: !isEditMode });
 
     useEffect(() => {
         if (vehicleData?.data) {
              const v = vehicleData.data;
-             setFormData({
-                 brand: v.brand,
-                 model: v.model,
-                 year: v.year,
-                 plateNumber: v.plateNumber,
-                 type: v.type,
-                 pricePerDay: v.pricePerDay,
-                 features: v.features?.join(', ') || '',
-                 status: v.status
-             });
+             setValue('brand', v.brand);
+             setValue('model', v.model);
+             setValue('year', v.year);
+             setValue('plateNumber', v.plateNumber);
+             setValue('type', v.type);
+             setValue('pricePerDay', v.pricePerDay);
+             setValue('features', v.features?.join(', ') || '');
+             setValue('status', v.status as any);
         }
-    }, [vehicleData]);
-
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
-        const { name, value } = e.target;
-        setFormData(prev => ({ ...prev, [name]: value }));
-    };
+    }, [vehicleData, setValue]);
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0]) {
@@ -56,21 +73,21 @@ export const AddEditVehicle = () => {
         }
     };
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        
+    const onSubmit = async (data: VehicleFormInputs) => {
         const form = new FormData();
-        form.append('brand', formData.brand);
-        form.append('model', formData.model);
-        form.append('year', formData.year.toString());
-        form.append('plateNumber', formData.plateNumber);
-        form.append('type', formData.type);
-        form.append('pricePerDay', formData.pricePerDay.toString());
-        form.append('status', formData.status);
+        form.append('brand', data.brand);
+        form.append('model', data.model);
+        form.append('year', data.year.toString());
+        form.append('plateNumber', data.plateNumber);
+        form.append('type', data.type);
+        form.append('pricePerDay', data.pricePerDay.toString());
+        form.append('status', data.status);
         
         // Handle features array
-        const featuresArray = formData.features.split(',').map(f => f.trim()).filter(Boolean);
+        if (data.features) {
+            const featuresArray = data.features.split(',').map(f => f.trim()).filter(Boolean);
         featuresArray.forEach(f => form.append('features[]', f));
+        }
 
         if (imageFile) {
             form.append('image', imageFile);
@@ -87,11 +104,14 @@ export const AddEditVehicle = () => {
             navigate('/admin');
         }   catch (err: any) {
               console.error(err);
-              toast.error(err.data?.message || 'Registration failed');
+              toast.error(err.data?.message || 'Action failed');
             }
     };
 
     const isLoading = isCreating || isUpdating;
+
+    const pageTitle = isEditMode ? 'Edit Vehicle' : 'Add New Vehicle';
+    const submitButtonText = isLoading ? 'Saving...' : (isEditMode ? 'Update Vehicle' : 'Add Vehicle');
 
     return (
         <div className="max-w-2xl mx-auto">
@@ -100,42 +120,34 @@ export const AddEditVehicle = () => {
             </Link>
             
             <h1 className="text-3xl font-bold text-gray-900 mb-8">
-                {isEditMode ? 'Edit Vehicle' : 'Add New Vehicle'}
+                {pageTitle}
             </h1>
 
-            <form onSubmit={handleSubmit} className="bg-white shadow rounded-lg p-6 space-y-6">
+            <form onSubmit={handleSubmit(onSubmit)} className="bg-white shadow rounded-lg p-6 space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <Input 
                         label="Brand" 
-                        name="brand" 
-                        value={formData.brand} 
-                        onChange={handleChange} 
-                        required 
+                        {...register('brand')}
+                        error={errors.brand?.message}
                     />
                     <Input 
                         label="Model" 
-                        name="model" 
-                        value={formData.model} 
-                        onChange={handleChange} 
-                        required 
+                        {...register('model')}
+                        error={errors.model?.message}
                     />
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <Input 
                         label="Year" 
-                        name="year" 
                         type="number" 
-                        value={formData.year} 
-                        onChange={handleChange} 
-                        required 
+                        {...register('year')}
+                        error={errors.year?.message}
                     />
                     <Input 
                         label="Plate Number" 
-                        name="plateNumber" 
-                        value={formData.plateNumber} 
-                        onChange={handleChange} 
-                        required 
+                        {...register('plateNumber')}
+                        error={errors.plateNumber?.message}
                     />
                 </div>
 
@@ -143,38 +155,34 @@ export const AddEditVehicle = () => {
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">Type</label>
                         <select 
-                            name="type" 
-                            value={formData.type} 
-                            onChange={handleChange}
+                            {...register('type')}
                             className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
                         >
                             {["Sedan", "SUV", "Luxury", "Truck", "Van"].map(t => (
                                 <option key={t} value={t}>{t}</option>
                             ))}
                         </select>
+                        {errors.type && <p className="mt-1 text-sm text-red-600">{errors.type.message}</p>}
                     </div>
                     <Input 
                         label="Price Per Day ($)" 
-                        name="pricePerDay" 
                         type="number" 
-                        value={formData.pricePerDay} 
-                        onChange={handleChange} 
-                        required 
+                        {...register('pricePerDay')}
+                        error={errors.pricePerDay?.message}
                     />
                 </div>
                 
                  <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
                     <select 
-                        name="status" 
-                        value={formData.status} 
-                        onChange={handleChange}
+                        {...register('status')}
                         className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
                     >
                         <option value="available">Available</option>
                         <option value="rented">Rented</option>
                         <option value="maintenance">Maintenance</option>
                     </select>
+                    {errors.status && <p className="mt-1 text-sm text-red-600">{errors.status.message}</p>}
                 </div>
 
                 <div>
@@ -193,13 +201,14 @@ export const AddEditVehicle = () => {
                 <div>
                      <label className="block text-sm font-medium text-gray-700 mb-1">Features (comma separated)</label>
                      <textarea 
-                        name="features"
                         rows={3}
-                        value={formData.features}
-                        onChange={handleChange}
-                        className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                        {...register('features')}
+                        className={`block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none sm:text-sm ${
+                            errors.features ? 'border-red-500 focus:ring-red-500 focus:border-red-500' : 'border-gray-300 focus:ring-blue-500 focus:border-blue-500'
+                        }`}
                         placeholder="GPS, Bluetooth, Leather Seats..."
                      />
+                     {errors.features && <p className="mt-1 text-sm text-red-600">{errors.features.message}</p>}
                 </div>
 
                 <div className="flex justify-end">
@@ -208,7 +217,7 @@ export const AddEditVehicle = () => {
                         disabled={isLoading}
                         className="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 transition disabled:opacity-50"
                     >
-                        {isLoading ? 'Saving...' : (isEditMode ? 'Update Vehicle' : 'Add Vehicle')}
+                        {submitButtonText}
                     </button>
                 </div>
             </form>

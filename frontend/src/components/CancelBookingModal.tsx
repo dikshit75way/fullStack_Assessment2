@@ -1,8 +1,11 @@
 
-import { useState } from 'react';
+
 import { X, AlertTriangle } from 'lucide-react';
 import { useCancelBookingMutation } from '../services/booking';
 import toast from 'react-hot-toast';
+import { useForm } from 'react-hook-form';
+import { yupResolver } from '@hookform/resolvers/yup';
+import * as yup from 'yup';
 
 interface CancelBookingModalProps {
     isOpen: boolean;
@@ -11,35 +14,27 @@ interface CancelBookingModalProps {
     onSuccess: () => void;
 }
 
+const cancelSchema = yup.object({
+    reason: yup.string().min(10, 'Reason must be at least 10 characters long').required('Please provide a reason for cancellation'),
+}).required();
+
+type CancelFormInputs = yup.InferType<typeof cancelSchema>;
+
 export const CancelBookingModal = ({ isOpen, onClose, bookingId, onSuccess }: CancelBookingModalProps) => {
-    const [reason, setReason] = useState('');
-    const [error, setError] = useState('');
     const [cancelBooking, { isLoading }] = useCancelBookingMutation();
 
     if (!isOpen) return null;
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        
-        if (!reason.trim()) {
-            setError("Please provide a reason for cancellation");
-            return;
-        }
-
-        if (reason.trim().length < 10) {
-            setError("Reason must be at least 10 characters long");
-            return;
-        }
-
+    const onSubmit = async (data: CancelFormInputs) => {
         try {
-            await cancelBooking({ id: bookingId, reason }).unwrap();
+            await cancelBooking({ id: bookingId, reason: data.reason }).unwrap();
             toast.success("Booking cancelled successfully");
-            setReason('');
+            reset();
             onSuccess();
             onClose();
         }   catch (err: any) {
               console.error(err);
-              toast.error(err.data?.message || 'Registration failed');
+              toast.error(err.data?.message || 'Cancellation failed');
             }
     };
 
@@ -69,25 +64,21 @@ export const CancelBookingModal = ({ isOpen, onClose, bookingId, onSuccess }: Ca
                         </ul>
                     </div>
 
-                    <form onSubmit={handleSubmit}>
+                    <form onSubmit={handleSubmit(onSubmit)}>
                         <div className="mb-4">
                             <label className="block text-gray-700 font-medium mb-2">
                                 Reason for Cancellation <span className="text-red-500">*</span>
                             </label>
                             <textarea 
                                 className={`w-full px-4 py-3 border rounded-lg focus:ring-2 outline-none transition ${
-                                    error ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-red-500'
+                                    errors.reason ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-red-500'
                                 }`}
                                 rows={3}
                                 placeholder="Please explain why you are cancelling..."
-                                value={reason}
-                                onChange={(e) => {
-                                    setReason(e.target.value);
-                                    if (error) setError('');
-                                }}
+                                {...register('reason')}
                                 required
                             />
-                            {error && <p className="mt-1 text-sm text-red-600">{error}</p>}
+                            {errors.reason && <p className="mt-1 text-sm text-red-600">{errors.reason.message}</p>}
                         </div>
 
                         <div className="flex justify-end space-x-3">

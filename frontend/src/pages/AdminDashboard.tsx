@@ -43,7 +43,22 @@ export const AdminDashboard = () => {
   };
 
   const vehicles = vehicleData?.data || [];
-  const kycUsers = usersData || []; // Adjust based on actual API response structure (transformResponse handled it)
+  const kycUsers = usersData || [];
+
+  const getTabClass = (tab: 'vehicles' | 'kyc') => 
+    `py-2 px-4 font-medium transition ${activeTab === tab ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-500 hover:text-gray-700'}`;
+
+  const vehicleStatusStyles: Record<string, string> = {
+    available: 'bg-green-100 text-green-800',
+    maintenance: 'bg-yellow-100 text-yellow-800',
+    rented: 'bg-red-100 text-red-800',
+  };
+
+  const kycStatusStyles: Record<string, string> = {
+    verified: 'bg-green-100 text-green-800',
+    pending: 'bg-yellow-100 text-yellow-800',
+    rejected: 'bg-red-100 text-red-800',
+  };
 
   return (
     <div>
@@ -53,13 +68,13 @@ export const AdminDashboard = () => {
 
       <div className="mb-6 flex space-x-4 border-b border-gray-200">
           <button 
-            className={`py-2 px-4 font-medium transition ${activeTab === 'vehicles' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-500 hover:text-gray-700'}`}
+            className={getTabClass('vehicles')}
             onClick={() => setActiveTab('vehicles')}
           >
               Fleet Management
           </button>
           <button 
-            className={`py-2 px-4 font-medium transition ${activeTab === 'kyc' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-500 hover:text-gray-700'}`}
+            className={getTabClass('kyc')}
             onClick={() => setActiveTab('kyc')}
           >
               KYC Requests
@@ -105,7 +120,7 @@ export const AdminDashboard = () => {
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{vehicle.type}</td>
                                     <td className="px-6 py-4 whitespace-nowrap">
-                                        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${vehicle.status === 'available' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                                        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${vehicleStatusStyles[vehicle.status] || 'bg-gray-100 text-gray-800'}`}>
                                             {vehicle.status}
                                         </span>
                                     </td>
@@ -152,10 +167,7 @@ export const AdminDashboard = () => {
                                         <div className="text-sm text-gray-500">{user.email}</div>
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap">
-                                        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                                            user.kycStatus === 'verified' ? 'bg-green-100 text-green-800' : 
-                                            user.kycStatus === 'pending' ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'
-                                        }`}>
+                                        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${kycStatusStyles[user.kycStatus] || 'bg-gray-100 text-gray-800'}`}>
                                             {user.kycStatus}
                                         </span>
                                     </td>

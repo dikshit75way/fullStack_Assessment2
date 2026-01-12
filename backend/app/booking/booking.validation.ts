@@ -10,3 +10,6 @@ export const createBooking = [
 export const cancelBooking = [
   body("reason").isString().notEmpty().withMessage("Cancellation reason is required"),
 ];
+
+
+

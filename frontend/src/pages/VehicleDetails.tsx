@@ -11,9 +11,24 @@ import { KYCModal } from '../components/KYCModal';
 import { setCredentials } from '../store/authSlice';
 import { getImageUrl } from '../utils/image';
 import { type IUser } from '../store/authSlice';
+import { useForm } from 'react-hook-form';
+import { yupResolver } from '@hookform/resolvers/yup';
+import * as yup from 'yup';
 
 
 
+
+const bookingSchema = yup.object({
+  startDate: yup.string().required('Start date is required'),
+  endDate: yup.string()
+    .required('End date is required')
+    .test('is-after-start', 'End date must be after start date', function(value) {
+      const { startDate } = this.parent;
+      return !startDate || !value || new Date(value) >= new Date(startDate);
+    }),
+}).required();
+
+type BookingFormInputs = yup.InferType<typeof bookingSchema>;
 
 export const VehicleDetails = () => {
   const { id } = useParams<{ id: string }>();
@@ -24,13 +39,15 @@ export const VehicleDetails = () => {
   const { user } = useSelector((state: RootState) => state.auth);
   const [showKYCModal, setShowKYCModal] = useState(false);
 
-  const [bookingDates, setBookingDates] = useState({
-      startDate: '',
-      endDate: ''
+  const {
+    register,
+    handleSubmit,
+    formState: { errors: formErrors },
+  } = useForm<BookingFormInputs>({
+    resolver: yupResolver(bookingSchema),
   });
-  const [dateErrors, setDateErrors] = useState<{ startDate?: string; endDate?: string }>({});
 
-  const handleBooking = async () => {
+  const onSubmit = async (data: BookingFormInputs) => {
       // 1. Check Login
       if (!user) {
           toast.error("Please login to book");
@@ -49,47 +66,29 @@ export const VehicleDetails = () => {
           return;
       }
       
-      // 3. Dates Validation
-      const newErrors: { startDate?: string; endDate?: string } = {};
-      if (!bookingDates.startDate) newErrors.startDate = "Start date is required";
-      if (!bookingDates.endDate) newErrors.endDate = "End date is required";
-      
-      if (bookingDates.startDate && bookingDates.endDate) {
-          if (new Date(bookingDates.startDate) > new Date(bookingDates.endDate)) {
-              newErrors.endDate = "End date cannot be before start date";
-          }
-      }
+      if (!data) return;
 
-      if (Object.keys(newErrors).length > 0) {
-          setDateErrors(newErrors);
-          return;
-      }
-
-      if (!data?.data) return;
-
-      // 4. Create Booking
-      const start = new Date(bookingDates.startDate);
-      const end = new Date(bookingDates.endDate);
+      // 3. Create Booking
+      const start = new Date(data.startDate);
+      const end = new Date(data.endDate);
       const days = Math.ceil((end.getTime() - start.getTime()) / (1000 * 3600 * 24));
-      const totalAmount = days * data.data.pricePerDay;
-
-      if (days <= 0) {
-           toast.error("Invalid duration");
-           return;
-      }
+      
+      // Handle same day booking as 1 day, but check if duration is valid
+      const duration = days <= 0 ? 1 : days;
+      const totalAmount = duration * (vehicle?.pricePerDay || 0);
       
       try {
           await createBooking({
               vehicleId: id as any,
-              startDate: bookingDates.startDate,
-              endDate: bookingDates.endDate,
+              startDate: data.startDate,
+              endDate: data.endDate,
               totalAmount: totalAmount
           }).unwrap();
           toast.success("Booking Request Sent!");
           navigate('/dashboard');
-      }   catch (err: any) {
+    }   catch (err: any) {
       console.error(err);
-      toast.error(err.data?.message || 'Registration failed');
+      toast.error(err.data?.message || 'Booking failed');
     }
   };
 
@@ -105,9 +104,27 @@ export const VehicleDetails = () => {
   };
 
   if (isLoading) return <div className="text-center py-20">Loading vehicle details...</div>;
-  if (error || !data) return <div className="text-center py-20 text-red-500">Error loading vehicle details or vehicle not found.</div>;
+  if (error || !data?.data) return <div className="text-center py-20 text-red-500">Error loading vehicle details or vehicle not found.</div>;
 
   const vehicle = data.data;
+
+  const isVehicleAvailable = vehicle.status === 'available';
+  const isKycVerified = user?.kycStatus === 'verified';
+  const isKycPending = user?.kycStatus === 'pending';
+  const canBook = isVehicleAvailable && isKycVerified;
+
+  const getButtonText = () => {
+    if (isBooking) return 'Processing...';
+    if (!isKycVerified) return 'Verification Required';
+    if (!isVehicleAvailable) return 'Currently Unavailable';
+    return 'Book Now';
+  };
+
+  const buttonClasses = `w-full py-4 rounded-lg text-lg font-bold transition shadow-lg ${
+    canBook 
+      ? 'btn-primary' 
+      : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+  }`;
 
   return (
     <div>
@@ -179,51 +196,37 @@ export const VehicleDetails = () => {
                  </ul>
                </div>
 
-                {/* Booking Form Area */}
-                <div className="bg-gray-50 p-4 rounded-lg mb-4">
-                    <h3 className="text-lg font-semibold mb-2">Book this Vehicle</h3>
-                    <div className="grid grid-cols-2 gap-4">
-                         <Input 
-                             label="Start Date" 
-                             type="date" 
-                             value={bookingDates.startDate}
-                             onChange={(e) => {
-                               setBookingDates({...bookingDates, startDate: e.target.value});
-                               if (dateErrors.startDate) setDateErrors({...dateErrors, startDate: undefined});
-                             }}
-                             min={new Date().toISOString().split('T')[0]}
-                             error={dateErrors.startDate}
-                         />
-                         <Input 
-                             label="End Date" 
-                             type="date" 
-                             value={bookingDates.endDate}
-                             onChange={(e) => {
-                               setBookingDates({...bookingDates, endDate: e.target.value});
-                               if (dateErrors.endDate) setDateErrors({...dateErrors, endDate: undefined});
-                             }}
-                             min={bookingDates.startDate || new Date().toISOString().split('T')[0]}
-                             error={dateErrors.endDate}
-                         />
+                <form onSubmit={handleSubmit(onSubmit)}>
+                    <div className="bg-gray-50 p-4 rounded-lg mb-4">
+                        <h3 className="text-lg font-semibold mb-2">Book this Vehicle</h3>
+                        <div className="grid grid-cols-2 gap-4">
+                             <Input 
+                                 label="Start Date" 
+                                 type="date" 
+                                 {...register('startDate')}
+                                 min={new Date().toISOString().split('T')[0]}
+                                 error={formErrors.startDate?.message}
+                             />
+                             <Input 
+                                 label="End Date" 
+                                 type="date" 
+                                 {...register('endDate')}
+                                 min={new Date().toISOString().split('T')[0]}
+                                 error={formErrors.endDate?.message}
+                             />
+                        </div>
                     </div>
-                </div>
-            </div>
-
-            <div>
-              <button 
-                onClick={handleBooking}
-                className={`w-full py-4 rounded-lg text-lg font-bold transition shadow-lg ${
-                  vehicle.status === 'available' && (user?.kycStatus === 'verified')
-                    ? 'btn-primary' 
-                    : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                }`}
-                disabled={vehicle.status !== 'available' || isBooking || (user?.kycStatus !== 'verified')}
-              >
-                {isBooking ? 'Processing...' : (
-                    user?.kycStatus === 'verified' ? (vehicle.status === 'available' ? 'Book Now' : 'Currently Unavailable') : 'Verification Required'
-                )}
-              </button>
-              {user?.kycStatus !== 'verified' && user?.kycStatus !== 'pending' && (
+                
+                    <div>
+                      <button 
+                        type="submit"
+                        className={buttonClasses}
+                        disabled={!canBook || isBooking}
+                      >
+                        {getButtonText()}
+                      </button>
+                    </div>
+                </form>  {!isKycVerified && !isKycPending && (
                   <button 
                     onClick={() => setShowKYCModal(true)}
                     className="w-full mt-2 py-2 text-blue-600 hover:text-blue-800 underline"

@@ -16,6 +16,13 @@ export const UserDashboard = () => {
 
   const bookings = data?.data || [];
 
+  const statusStyles: Record<string, string> = {
+    confirmed: 'bg-green-100 text-green-800',
+    pending: 'bg-yellow-100 text-yellow-800',
+    cancelled: 'bg-red-100 text-red-800',
+    completed: 'bg-blue-100 text-blue-800',
+  };
+
   return (
     <div>
       <h1 className="text-3xl font-bold text-gray-900 mb-6">My Dashboard</h1>
@@ -56,12 +63,7 @@ export const UserDashboard = () => {
                       )}
 
                       <div className="mt-2 text-sm">
-                        <span className={`px-2 py-1 rounded-full ${
-                          booking.status === 'confirmed' ? 'bg-green-100 text-green-800' :
-                          booking.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                          booking.status === 'cancelled' ? 'bg-red-100 text-red-800' :
-                          'bg-gray-100 text-gray-800'
-                        }`}>
+                        <span className={`px-2 py-1 rounded-full ${statusStyles[booking.status] || 'bg-gray-100 text-gray-800'}`}>
                           {booking.status.toUpperCase()}
                         </span>
                       </div>
