@@ -12,9 +12,4 @@ const router = Router();
 router.get("/", vehicleController.getVehicles);
 router.get("/:id", vehicleController.getVehicleById);
 
-// Protected Admin/Fleet Manager routes
-router.post("/", authenticateJwt, requireRole(["admin"]), upload.single("image"), vehicleValidation.createVehicle, catchError, vehicleController.createVehicle);
-router.patch("/:id", authenticateJwt, requireRole(["admin"]), upload.single("image"), vehicleValidation.updateVehicle, catchError, vehicleController.updateVehicle);
-router.delete("/:id", authenticateJwt, requireRole(["admin"]), vehicleController.deleteVehicle);
-
 export default router;

@@ -8,4 +8,7 @@ export interface IPayment extends BaseSchema {
   paymentMethod: string;
   status: "pending" | "success" | "failed";
   transactionId?: string;
+  stripePaymentIntentId?: string;
+  clientSecret?: string;
+  currency?: string;
 }

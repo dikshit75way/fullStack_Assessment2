@@ -15,6 +15,8 @@ const PaymentSchema = new Schema<IPayment>(
       default: "pending",
     },
     transactionId: { type: String },
+    stripePaymentIntentId: { type: String },
+    clientSecret: { type: String },
   },
   { timestamps: true }
 );

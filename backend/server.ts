@@ -37,10 +37,21 @@ app.use(
     credentials: true,
   })
 );
-app.use(bodyParser.urlencoded({ extended: false }));
-app.use(bodyParser.json());
-app.use(express.json());
 app.use(morgan("dev"));
+
+// Body parser configuration to skip webhook route
+const skipWebhook = (req: Request) => req.originalUrl.startsWith("/api/payments/webhook");
+
+app.use((req, res, next) => {
+  if (skipWebhook(req)) return next();
+  bodyParser.json()(req, res, next);
+});
+
+app.use((req, res, next) => {
+  if (skipWebhook(req)) return next();
+  bodyParser.urlencoded({ extended: false })(req, res, next);
+});
+
 app.use(globalLimiter);
 // Use process.cwd() to correctly locate uploads folder from project root
 app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));

@@ -12,7 +12,5 @@ const router = Router();
 
 router.get("/profile", authenticateJwt, userController.getProfile);
 router.post("/verify-kyc", authenticateJwt, userValidation.verifyKYC, catchError, userController.verifyKYC);
-router.patch("/admin/kyc/:id", authenticateJwt, requireRole(["admin"]), userController.updateKYCStatus);
-router.get("/", authenticateJwt, requireRole(["admin"]), userController.getAllUsers);
 router.post("/", userController.createUser);
 export default router;
